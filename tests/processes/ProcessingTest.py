@@ -131,6 +131,13 @@ class ProcessingTest(unittest.TestCase):
                          ') at 0x[0-9a-fA-F]+>'.format(hex(global_result.id)))
 
     def test_empty_run(self):
+        execute_section(self.sections['default'],
+                        [],
+                        [],
+                        lambda *args: self.result_queue.put(args[2]),
+                        None,
+                        self.log_printer,
+                        console_printer=self.console_printer)
         self.sections['default'].append(Setting('jobs', 'bogus!'))
         results = execute_section(self.sections['default'],
                                   [],
@@ -201,7 +208,7 @@ class ProcessingTest(unittest.TestCase):
             {1: [first_global]},
             {'f': ['first line  # stop ignoring, invalid ignore range\n',
                    'second line  # ignore all\n',
-                   "third line\n",
+                   'third line\n',
                    "fourth line  # gnore shouldn't trigger without i!\n",
                    '# Start ignoring ABear, BBear and CBear\n',
                    '# Stop ignoring\n',
@@ -439,6 +446,39 @@ class ProcessingTest(unittest.TestCase):
             self.assertEqual(test_source_range.start.column, 1)
             self.assertEqual(test_source_range.end.line, 2)
             self.assertEqual(test_source_range.end.column, 20)
+
+        test_file_dict_e = {'f':
+                            ('# Ignore all\n',
+                             'e_string = "This string should be ignored"\n')}
+        test_ignore_range_e = list(yield_ignore_ranges(test_file_dict_e))
+        for test_bears, test_source_range in test_ignore_range_e:
+            self.assertEqual(test_bears, [])
+            self.assertEqual(test_source_range.start.line, 1)
+            self.assertEqual(test_source_range.start.column, 1)
+            self.assertEqual(test_source_range.end.line, 2)
+            self.assertEqual(test_source_range.end.column, 43)
+
+        test_file_dict_n = {'f':
+                            ('# noqa nBear\n',
+                             'n_string = "This string should be ignored"\n')}
+        test_ignore_range_n = list(yield_ignore_ranges(test_file_dict_n))
+        for test_bears, test_source_range in test_ignore_range_n:
+            self.assertEqual(test_bears, ['nbear'])
+            self.assertEqual(test_source_range.start.line, 1)
+            self.assertEqual(test_source_range.start.column, 1)
+            self.assertEqual(test_source_range.end.line, 2)
+            self.assertEqual(test_source_range.end.column, 43)
+
+        test_file_dict_n = {'f':
+                            ('# noqa\n',
+                             'n_string = "This string should be ignored"\n')}
+        test_ignore_range_n = list(yield_ignore_ranges(test_file_dict_n))
+        for test_bears, test_source_range in test_ignore_range_n:
+            self.assertEqual(test_bears, [])
+            self.assertEqual(test_source_range.start.line, 1)
+            self.assertEqual(test_source_range.start.column, 1)
+            self.assertEqual(test_source_range.end.line, 2)
+            self.assertEqual(test_source_range.end.column, 43)
 
         # This case was a bug.
         test_file_dict_single_line = {'f': ('# ignore XBEAR',)}

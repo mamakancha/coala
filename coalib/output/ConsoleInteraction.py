@@ -192,17 +192,17 @@ def print_lines(console_printer,
         printed_chars = 0
         if i == sourcerange.start.line and sourcerange.start.column:
             console_printer.print(highlight_text(
-                no_color, line[:sourcerange.start.column-1], lexer), end='')
+                no_color, line[:sourcerange.start.column - 1], lexer), end='')
 
-            printed_chars = sourcerange.start.column-1
+            printed_chars = sourcerange.start.column - 1
 
         if i == sourcerange.end.line and sourcerange.end.column:
             console_printer.print(highlight_text(
-                no_color, line[printed_chars:sourcerange.end.column-1],
+                no_color, line[printed_chars:sourcerange.end.column - 1],
                 lexer, BackgroundSourceRangeStyle), end='')
 
             console_printer.print(highlight_text(
-               no_color, line[sourcerange.end.column-1:], lexer), end='')
+               no_color, line[sourcerange.end.column - 1:], lexer), end='')
             console_printer.print('')
 
         else:
@@ -278,15 +278,26 @@ def print_diffs_info(diffs, printer):
             color='green')
 
 
+_warn_deprecated_format_str = True  # Remove when format_str is deprecated
+
+
 def print_results_formatted(log_printer,
                             section,
                             result_list,
                             *args):
+    global _warn_deprecated_format_str
     default_format = ('id:{id}:origin:{origin}:file:{file}:line:{line}:'
                       'column:{column}:end_line:{end_line}:end_column:'
                       '{end_column}:severity:{severity}:severity_str:'
                       '{severity_str}:message:{message}')
-    format_str = str(section.get('format', default_format))
+    if 'format_str' in section:
+        format_str = str(section.get('format_str', default_format))
+        if _warn_deprecated_format_str:
+            log_printer.warn('The setting "format_str" has been deprecated.'
+                             ' Please use "format" instead')
+            _warn_deprecated_format_str = False
+    else:
+        format_str = str(section.get('format', default_format))
 
     if format_str == 'True':
         format_str = default_format
